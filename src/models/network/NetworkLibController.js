@@ -27,7 +27,7 @@ export default class NetworkLibController extends NetworkBaseController {
     this.package = await Package.fetch(address, this.txParams);
   }
 
-  setImplementation(contractClass, contractAlias) {
+  async setImplementation(contractClass, contractAlias) {
     return this.package.setImplementation(this.networkPackage.version, contractClass, contractAlias);
   }
 

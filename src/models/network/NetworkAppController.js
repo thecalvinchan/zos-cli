@@ -56,7 +56,7 @@ export default class NetworkAppController extends NetworkBaseController {
     return this.app.currentDirectory();
   }
 
-  setImplementation(contractClass, contractAlias) {
+  async setImplementation(contractClass, contractAlias) {
     return this.app.setImplementation(contractClass, contractAlias);
   }
 
@@ -67,6 +67,7 @@ export default class NetworkAppController extends NetworkBaseController {
     this.checkInitialization(contractClass, initMethod, initArgs);
     const proxyInstance = await this.app.createProxy(contractClass, contractAlias, initMethod, initArgs);
     const implementationAddress = await this.app.getImplementation(contractAlias);
+    this._updateTruffleDeployedInformation(contractAlias, contractClass.at(implementationAddress))
 
     const proxyInfo = {
       address: proxyInstance.address,
@@ -202,4 +203,19 @@ export default class NetworkAppController extends NetworkBaseController {
     return super.isContractDefined(contractAlias) || this.isStdlibContract(contractAlias);
   }
 
+  _updateTruffleDeployedInformation(contractAlias, implementation) {
+    const contractName = this.packageData.contracts[contractAlias]
+    if (contractName) {
+      const path = `${process.cwd()}/build/contracts/${contractName}.json`
+      const data = fs.parseJson(path)
+      data.networks = {}
+      data.networks[implementation.constructor.network_id] = {
+        links: {},
+        events: {},
+        address: implementation.address,
+        updated_at: Date.now()
+      }
+      fs.writeJson(path, data)
+    }
+  }
 }
