@@ -16,27 +16,27 @@ export default class ZosNetworkFile {
   }
 
   get app() {
-    return this.data.app
+    return this.data.app || {}
   }
 
   get appAddress() {
-    return this.app && this.app.address
+    return this.app.address
   }
 
   get package() {
-    return this.data.package
+    return this.data.package || {}
   }
 
   get packageAddress() {
-    return this.package && this.package.address
+    return this.package.address
   }
 
   get provider() {
-    return this.data.provider
+    return this.data.provider || {}
   }
 
   get providerAddress() {
-    return this.provider && this.provider.address
+    return this.provider.address
   }
 
   get version() {
@@ -48,27 +48,27 @@ export default class ZosNetworkFile {
   }
 
   get stdlib() {
-    return this.data.stdlib
+    return this.data.stdlib || {}
   }
 
   get stdlibName() {
-    return this.stdlib && this.stdlib.name
+    return this.stdlib.name
   }
 
   get stdlibVersion() {
-    return this.stdlib && this.stdlib.version
+    return this.stdlib.version
   }
 
   get stdlibAddress() {
-    return this.stdlib && this.stdlib.address
+    return this.stdlib.address
   }
 
   get proxies() {
-    return this.data.proxies
+    return this.data.proxies || {}
   }
 
   get contracts() {
-    return this.data.contracts
+    return this.data.contracts || {}
   }
 
   get contractAliases() {
@@ -90,8 +90,17 @@ export default class ZosNetworkFile {
     return this.proxiesOf(alias)[index]
   }
 
+  proxyByAddress(alias, address) {
+    const index = this.indexOfProxy(alias, address)
+    return this.proxiesOf(alias)[index]
+  }
+
   proxiesOf(alias) {
     return this.proxies[alias] || []
+  }
+
+  indexOfProxy(alias, address) {
+    return this.proxiesOf(alias).findIndex(proxy => proxy.address === address)
   }
 
   contract(alias) {
@@ -165,16 +174,38 @@ export default class ZosNetworkFile {
     this.data.package = _package
   }
 
+  setStdlibAddress(address) {
+    const stdlib = this.stdlib || {}
+    stdlib.address = address
+    this.data.stdlib = stdlib
+  }
+
   unsetStdlib() {
     delete this.data['stdlib']
   }
 
-  setContract(alias, instance) {
-    this.data.contracts[alias] = {
+  addContract(alias, instance) {
+    this.setContract(alias, {
       address: instance.address,
       bytecodeHash: bytecodeDigest(instance.constructor.bytecode),
       constructorCode: extractConstructorCode(instance.constructor.bytecode),
-    }
+    })
+  }
+
+  setContract(alias, info) {
+    this.data.contracts[alias] = info
+  }
+
+  setContractAddress(alias, address) {
+    this.data.contracts[alias].address = address
+  }
+
+  setContractBytecodeHash(alias, bytecodeHash) {
+    this.data.contracts[alias].bytecodeHash = bytecodeHash
+  }
+
+  removeContract(alias) {
+    delete this.data.contracts[alias]
   }
 
   setProxies(alias, value) {
@@ -184,6 +215,19 @@ export default class ZosNetworkFile {
   addProxy(alias, info) {
     if (!this.hasProxies(alias)) this.setProxies(alias, [])
     this.data.proxies[alias].push(info)
+  }
+
+  setProxyImplementation(alias, address, implementation) {
+    const index = this.indexOfProxy(alias, address)
+    if(index < 0) return
+    this.data.proxies[alias][index].implementation = implementation
+  }
+
+  removeProxy(alias, address) {
+    const index = this.indexOfProxy(alias, address)
+    if(index < 0) return
+    this.data.proxies[alias].splice(index, 1)
+    if(this.proxiesOf(alias).length === 0) delete this.data.proxies[alias]
   }
 
   write() {
